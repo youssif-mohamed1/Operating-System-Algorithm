@@ -1,0 +1,300 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+#define FAST ios_base::sync_with_stdio(false), cin.tie(nullptr), cout.tie(nullptr);
+
+class PageReplacement {
+private:
+    int n, k;
+    vector<int> v;
+public:
+
+    PageReplacement(vector<int> &a, int mem) {
+        n = a.size();
+        v.resize(n);
+        for (int i = 0; i < n; i++) v[i] = a[i];
+        k = mem;
+    }
+
+    void FIFO () {
+        vector<int> vv;
+        vector<bool> vis(n + 1);
+        int idx = 0, cnt = 0;
+        for (int i = 0; i < n; i++) {
+            int x = v[i];
+            if (cnt < k) {
+                if (!vis[x]) {
+                    vv.push_back(x);
+                    vis[x] = 1;
+                    cnt++;
+                }
+            } else {
+                if (!vis[x]) {
+                    vis[vv[idx]] = 0;
+                    vv[idx] = x;
+                    vis[x] = 1;
+                    idx = (idx + 1) % k;
+                }
+            }
+            for (auto it: vv) {
+                cout << it << ' ';
+            }
+            cout << '\n';
+        }
+        cout << "\nNumber of swaps: " << cnt << "\n";
+    }
+
+    void lru() {
+        vector<vector<int>> ret(n);
+        set<int> st;
+        unordered_map<int, int> vis;
+        int cnt = 0;
+        for (int i = 0; i < n; i++) {
+            if (!vis[v[i]]) {
+                vis[v[i]] = 1;
+                st.insert(i);
+                cnt++;
+                if(cnt > k) {
+                    auto it = st.begin();
+                    vis[v[*it]] = 0;
+                    st.erase(it);
+                }
+            } else {
+                int idx;
+                for (auto j: st)
+                    if (v[j] == v[i]) {
+                        idx = j;
+                        break;
+                    }
+                st.erase(idx);
+                st.insert(i);
+            }
+            for (auto j: st)
+                ret[i].push_back(v[j]);
+        }
+        for (int i = 0; i < n; i++) {
+            for (auto j: ret[i])
+                cout << j << ' ';
+            cout << '\n';
+        }
+        cout << "\nNumber of swaps: " << cnt << "\n";
+    }
+
+    void lfu(){
+        vector<vector<int>> ret(n);
+        unordered_map<int, int> vis, freq;
+        set<int> st;
+        int cnt = 0;
+        for(int i = 0; i < n; i++){
+            if(!vis[v[i]]){
+                cnt++;
+                if(cnt > k){
+                    int mini = 1e9, idx;
+                    for(auto j : st) if(freq[v[j]] < mini) mini = freq[v[j]], idx = j;
+                    vis[v[idx]] = 0;
+                    st.erase(idx);
+                }
+                vis[v[i]] = 1;
+                st.insert(i);
+            }
+            else{
+                int idx;
+                for (auto j: st) if(v[j] == v[i]){idx = j; break;}
+                st.erase(idx);
+                st.insert(i);
+            }
+            freq[v[i]]++;
+            for (auto j: st)
+                ret[i].push_back(v[j]);
+        }
+        for (int i = 0; i < n; i++) {
+            for (auto j: ret[i])
+                cout << j << ' ';
+            cout << '\n';
+        }
+        cout << "\nNumber of swaps: " << cnt << "\n";
+    }
+
+    void mru() {
+        cout<<"MRU\n";
+        vector<int> cache;
+        int cnt = 0;
+        for (int i = 0; i < n; ++i) {
+            int page = v[i];
+            auto it = find(cache.begin(), cache.end(), page);
+            if (it != cache.end()) {
+                cache.erase(it);
+                cache.push_back(page);
+            } else if ((int) cache.size() < k) {
+                cache.push_back(page);
+                cnt++;
+            } else {
+                cnt++;
+                int removed = cache.back();
+                cache.pop_back();
+                cache.push_back(page);
+            }
+            for (int c: cache) cout << c << " ";
+            cout << "\n";
+        }
+        cout << "\nNumber of swaps: " << cnt << "\n";
+    }
+
+    void mfu() {
+        cout<<"MFU\n";
+        map<int, int> freq;
+        map<int, int> appear;
+        set<int> s;
+        int cnt = 0;
+        for (int i = 0; i < n; i++) {
+            freq[v[i]]++;
+            appear[v[i]] = i;
+            if (i < k) {
+                s.insert(v[i]);
+                cnt++;
+            } else {
+                if (s.find(v[i]) == s.end()) {
+                    int maxi = 0;
+                    for (auto it: s) maxi = max(maxi, freq[it]);
+                    vector<int> can;
+                    for (auto it: s) {
+                        if (freq[it] == maxi) {
+                            can.push_back(it);
+                        }
+                    }
+                    int last = -1, val;
+                    for (auto it: can) {
+                        if (appear[it] > last) {
+                            last = appear[it];
+                            val = it;
+                        }
+                    }
+                    cnt++;
+                    s.erase(val);
+                    s.insert(v[i]);
+                }
+            }
+            for (auto it: s) cout << it << " ";
+            cout<<"\n";
+        }
+        cout << "\nNumber of swaps: " << cnt << "\n";
+    }
+
+    void optimal() {
+        cout<<"Optimal Algorithm\n";
+        int cnt = 0;
+        map<int, set<int>> m;
+        set<pair<int, int>, greater<pair<int, int>>> s;
+        set<int> used;
+        for (int i = 0; i < n; i++) {
+            m[v[i]].insert(i);
+        }
+        for (int i = 0; i < n; i++) {
+            if (!m[v[i]].empty()) m[v[i]].erase(m[v[i]].begin());
+            int nxt = (m[v[i]].empty() ? n : *m[v[i]].begin());
+            if (s.find({i, v[i]}) != s.end()) {
+                s.erase({i, v[i]});
+                s.insert({nxt, v[i]});
+                used.insert(v[i]);
+            } else {
+                if (s.size() == k) {
+                    used.erase(s.begin()->second);
+                    s.erase(*s.begin());
+                }
+                s.insert({nxt, v[i]});
+                used.insert(s.begin()->second);
+                cnt++;
+            }
+            for (auto it: used) cout << it << " ";
+        }
+        cout << "Number of swaps: " << cnt << "\n";
+    }
+};
+
+void Banker () {
+    int n, k;
+    cin >> n >> k;
+    vector<vector<int>> Allocation(n, vector<int>(k));
+    vector<vector<int>> Max(n, vector<int>(k));
+    vector<vector<int>> Need(n, vector<int>(k));
+    vector<int> Available(k);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            cin >> Allocation[i][j];
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            cin >> Max[i][j];
+        }
+    }
+    for (int j = 0; j < k; j++) {
+        cin >> Available[j];
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            Need[i][j] = Max[i][j] - Allocation[i][j];
+        }
+    }
+    int cnt = n, last = -1;
+    vector<bool> done(n);
+    while (last != cnt && cnt != 0) {
+        last = cnt;
+        for (int i = 0; i < n; i++) {
+            if (done[i]) {
+                continue;
+            }
+            bool f = 1;
+            for (int j = 0; j < k; j++) {
+                if (Need[i][j] > Available[j]) {
+                    f = 0;
+                    break;
+                }
+            }
+            if (f) {
+                cout << 'P' << i << '\n';
+                for (int j = 0; j < k; j++) {
+                    Available[j] += Allocation[i][j];
+                }
+                done[i] = 1;
+                cnt--;
+                break;
+            }
+        }
+    }
+    if (cnt == 0) {
+        cout << "System is Safe";
+    } else if (cnt == 1) {
+        cout << "There are wrong in the Problem!";
+    } else {
+        cout << "System is Unsafe";
+    }
+}
+
+void solve() {
+    int type;
+    cin >> type;
+    if (type == 1) {
+        int n, k;
+        cin >> n >> k;
+        vector<int> v(n);
+        for (int i = 0; i < n; i++) cin >> v[i];
+        PageReplacement p(v, k);
+        p.FIFO();
+        p.lru();
+        p.mfu();
+        p.mru();
+        p.optimal();
+    } else {
+        Banker();
+    }
+}
+
+signed main() {
+    FAST
+#ifndef ONLINE_JUDGE
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+#endif
+    solve();
+}
